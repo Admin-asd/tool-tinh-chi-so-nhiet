@@ -1,0 +1,238 @@
+<!doctype html>
+<!-- Vị trí file: wp-content/gb-tools/math-science/tinh-nhiet-do-do-am.html -->
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Công cụ tính chỉ số nhiệt độ và độ ẩm online (Heat Index)</title>
+<meta name="description" content="Tính chỉ số nhiệt cảm nhận (Heat Index), điểm sương và độ ẩm tương đối online chính xác theo công thức NWS/Rothfusz. Hỗ trợ chuyển đổi độ C và độ F.">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.11"></script>
+<style type="text/tailwindcss">
+  @theme {
+    --font-sans: Roboto, ui-sans-serif, system-ui, sans-serif;
+    --color-primary: #fdca1e; --color-primary-hover: #e8b008; --color-primary-soft: #fffbeb;
+    --color-primary-ink: #9c6406; --color-ink: #0f172a; --color-neutral: #e5e7eb;
+  }
+</style>
+</head>
+<body class="bg-white font-sans text-ink antialiased">
+<main class="mx-auto max-w-5xl p-4 sm:p-6">
+  <div class="space-y-6">
+    <!-- Chuyển đổi đơn vị Nhiệt độ -->
+    <div class="flex justify-center gap-2 p-1 bg-slate-100 rounded-xl max-w-xs mx-auto">
+      <button type="button" id="btnC" onclick="setUnit('C')" class="flex-1 py-2 rounded-lg font-bold text-sm bg-primary text-ink shadow-xs">
+        °C
+      </button>
+      <button type="button" id="btnF" onclick="setUnit('F')" class="flex-1 py-2 rounded-lg font-semibold text-sm text-slate-500 hover:text-ink">
+        °F
+      </button>
+    </div>
+
+    <!-- Ô nhập dữ liệu -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <label for="tempInput" id="tempLabel" class="block font-bold text-ink mb-2">Nhiệt độ (°C)</label>
+        <div class="relative">
+          <input type="number" id="tempInput" value="35" step="0.1" oninput="calculate()" placeholder="Nhập nhiệt độ..." class="w-full rounded-xl border border-neutral p-3 pr-10 outline-none focus:border-primary focus:ring-2 focus:ring-primary/60 text-sm">
+          <span id="tempUnitText" class="absolute right-3 top-3 text-slate-400 font-bold text-sm">°C</span>
+        </div>
+      </div>
+
+      <div>
+        <label for="rhInput" class="block font-bold text-ink mb-2">Độ ẩm tương đối</label>
+        <div class="relative">
+          <input type="number" id="rhInput" value="60" min="0" max="100" step="1" oninput="calculate()" placeholder="Nhập độ ẩm..." class="w-full rounded-xl border border-neutral p-3 pr-10 outline-none focus:border-primary focus:ring-2 focus:ring-primary/60 text-sm">
+          <span class="absolute right-3 top-3 text-slate-400 font-bold text-sm">%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Thanh thao tác -->
+    <div class="flex flex-wrap justify-center gap-3">
+      <button type="button" id="copyBtn" onclick="copyResult()" class="min-h-11 rounded-xl bg-primary px-6 font-bold hover:bg-primary-hover shadow-xs text-sm">
+        Sao chép kết quả
+      </button>
+      <button type="button" onclick="resetAll()" class="min-h-11 rounded-xl border border-neutral px-6 font-semibold hover:border-primary text-sm bg-white">
+        Cài lại
+      </button>
+    </div>
+
+    <!-- Hiển thị kết quả tính toán -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="rounded-2xl bg-primary-soft border border-neutral/60 p-5 text-center">
+        <div class="text-xs font-bold text-primary-ink uppercase tracking-wider mb-1">Nhiệt độ thực tế</div>
+        <div id="resTemp" class="text-3xl font-bold text-ink">35.0 °C</div>
+      </div>
+
+      <div class="rounded-2xl bg-slate-50 border border-neutral p-5 text-center">
+        <div class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Chỉ số nhiệt (Cảm nhận)</div>
+        <div id="resHeatIndex" class="text-3xl font-bold text-primary-ink">45.2 °C</div>
+        <div id="resWarning" class="text-xs font-bold mt-1 text-amber-600">Nguy hiểm: Dễ kiệt sức vì nhiệt</div>
+      </div>
+
+      <div class="rounded-2xl bg-slate-50 border border-neutral p-5 text-center">
+        <div class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Điểm sương (Dew Point)</div>
+        <div id="resDewPoint" class="text-3xl font-bold text-ink">25.7 °C</div>
+      </div>
+    </div>
+
+    <!-- Công thức & Giải thích -->
+    <div class="rounded-2xl border border-neutral bg-slate-50 p-5 text-sm space-y-2 text-slate-600">
+      <h2 class="font-bold text-ink text-base">Công thức tính (Hồi quy Rothfusz)</h2>
+      <p class="font-mono text-xs bg-white p-3 rounded-xl border border-neutral/60 overflow-x-auto text-slate-700">
+        HI = -42.379 + 2.04901523*T + 10.14333127*RH - 0.22475541*T*RH - 0.00683783*T² - 0.05481717*RH² + 0.00122874*T²*RH + 0.00085282*T*RH² - 0.00000199*T²*RH²
+      </p>
+      <p class="text-xs text-slate-500">
+        Trong đó <strong>T</strong> = Nhiệt độ (°F), <strong>RH</strong> = Độ ẩm tương đối (%). Chỉ số nhiệt Heat Index biểu thị mức nhiệt thực tế mà cơ thể con người cảm nhận khi kết hợp độ ẩm không khí.[cite: 3]
+      </p>
+    </div>
+  </div>
+</main>
+
+<script>
+  async function gbCopy(text) {
+    try { await navigator.clipboard.writeText(text); return true; } catch (e) {}
+    const t = document.createElement('textarea'); t.value = text; t.style.position = 'fixed'; t.style.opacity = '0';
+    document.body.appendChild(t); t.select(); const ok = document.execCommand('copy'); t.remove(); return ok;
+  }
+  function gbDownload(data, filename, type = 'application/octet-stream') {
+    const url = URL.createObjectURL(data instanceof Blob ? data : new Blob([data], { type }));
+    const a = Object.assign(document.createElement('a'), { href: url, download: filename });
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  const gbStore = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+
+  let currentUnit = 'C';
+
+  function setUnit(unit) {
+    if (currentUnit === unit) return;
+    const tempInput = document.getElementById('tempInput');
+    let val = parseFloat(tempInput.value);
+
+    if (!isNaN(val)) {
+      if (unit === 'F') {
+        val = (val * 9/5) + 32;
+      } else {
+        val = (val - 32) * 5/9;
+      }
+      tempInput.value = val.toFixed(1);
+    }
+
+    currentUnit = unit;
+    document.getElementById('btnC').className = unit === 'C' ? 'flex-1 py-2 rounded-lg font-bold text-sm bg-primary text-ink shadow-xs' : 'flex-1 py-2 rounded-lg font-semibold text-sm text-slate-500 hover:text-ink';
+    document.getElementById('btnF').className = unit === 'F' ? 'flex-1 py-2 rounded-lg font-bold text-sm bg-primary text-ink shadow-xs' : 'flex-1 py-2 rounded-lg font-semibold text-sm text-slate-500 hover:text-ink';
+    
+    document.getElementById('tempLabel').textContent = `Nhiệt độ (°${unit})`;
+    document.getElementById('tempUnitText').textContent = `°${unit}`;
+    
+    calculate();
+  }
+
+  function calculateHeatIndexF(T, RH) {
+    // Đơn giản hóa theo chuẩn NWS
+    let HI = 0.5 * (T + 61.0 + ((T - 68.0) * 1.2) + (RH * 0.094));
+    if (HI >= 80) {
+      HI = -42.379 + 2.04901523 * T + 10.14333127 * RH 
+           - 0.22475541 * T * RH - 0.00683783 * T * T 
+           - 0.05481717 * RH * RH + 0.00122874 * T * T * RH 
+           + 0.00085282 * T * RH * RH - 0.00000199 * T * T * RH * RH;
+
+      if (RH < 13 && T >= 80 && T <= 112) {
+        let adj = ((13 - RH) / 4) * Math.sqrt((17 - Math.abs(T - 95.0)) / 17);
+        HI -= adj;
+      } else if (RH > 85 && T >= 80 && T <= 87) {
+        let adj = ((RH - 85) / 10) * ((87 - T) / 5);
+        HI += adj;
+      }
+    }
+    return HI;
+  }
+
+  function calculateDewPointC(T_c, RH) {
+    const a = 17.27;
+    const b = 237.7;
+    const alpha = ((a * T_c) / (b + T_c)) + Math.log(RH / 100);
+    return (b * alpha) / (a - alpha);
+  }
+
+  function calculate() {
+    const tempVal = parseFloat(document.getElementById('tempInput').value);
+    const rhVal = parseFloat(document.getElementById('rhInput').value);
+
+    if (isNaN(tempVal) || isNaN(rhVal) || rhVal < 0 || rhVal > 100) {
+      document.getElementById('resTemp').textContent = '--';
+      document.getElementById('resHeatIndex').textContent = '--';
+      document.getElementById('resDewPoint').textContent = '--';
+      document.getElementById('resWarning').textContent = 'Vui lòng nhập thông số hợp lệ';
+      return;
+    }
+
+    let tempC = currentUnit === 'C' ? tempVal : (tempVal - 32) * 5/9;
+    let tempF = currentUnit === 'F' ? tempVal : (tempVal * 9/5) + 32;
+
+    let hiF = calculateHeatIndexF(tempF, rhVal);
+    let hiC = (hiF - 32) * 5/9;
+
+    let dpC = calculateDewPointC(tempC, rhVal);
+    let dpF = (dpC * 9/5) + 32;
+
+    // Cập nhật kết quả
+    if (currentUnit === 'C') {
+      document.getElementById('resTemp').textContent = `${tempC.toFixed(1)} °C`;
+      document.getElementById('resHeatIndex').textContent = `${hiC.toFixed(1)} °C`;
+      document.getElementById('resDewPoint').textContent = `${dpC.toFixed(1)} °C`;
+    } else {
+      document.getElementById('resTemp').textContent = `${tempF.toFixed(1)} °F`;
+      document.getElementById('resHeatIndex').textContent = `${hiF.toFixed(1)} °F`;
+      document.getElementById('resDewPoint').textContent = `${dpF.toFixed(1)} °F`;
+    }
+
+    // Cảnh báo sức khỏe theo nhiệt độ cảm nhận (°C)
+    const warnElem = document.getElementById('resWarning');
+    if (hiC < 27) {
+      warnElem.textContent = 'Mức độ an toàn: Thoải mái';
+      warnElem.className = 'text-xs font-bold mt-1 text-emerald-600';
+    } else if (hiC < 32) {
+      warnElem.textContent = 'Thận trọng: Mệt mỏi nếu vận động lâu';
+      warnElem.className = 'text-xs font-bold mt-1 text-yellow-600';
+    } else if (hiC < 41) {
+      warnElem.textContent = 'Đặc biệt thận trọng: Dễ chuột rút, kiệt sức';
+      warnElem.className = 'text-xs font-bold mt-1 text-amber-600';
+    } else if (hiC < 54) {
+      warnElem.textContent = 'Nguy hiểm: Dễ say nắng, kiệt sức vì nhiệt';
+      warnElem.className = 'text-xs font-bold mt-1 text-orange-600';
+    } else {
+      warnElem.textContent = 'Cực kỳ nguy hiểm: Rất dễ sốc nhiệt!';
+      warnElem.className = 'text-xs font-bold mt-1 text-red-600';
+    }
+  }
+
+  function resetAll() {
+    document.getElementById('tempInput').value = '35';
+    document.getElementById('rhInput').value = '60';
+    calculate();
+  }
+
+  async function copyResult() {
+    const temp = document.getElementById('resTemp').textContent;
+    const hi = document.getElementById('resHeatIndex').textContent;
+    const dp = document.getElementById('resDewPoint').textContent;
+    const warn = document.getElementById('resWarning').textContent;
+
+    const text = `Nhiệt độ thực tế: ${temp}\nChỉ số nhiệt cảm nhận: ${hi} (${warn})\nĐiểm sương: ${dp}`;
+    const ok = await gbCopy(text);
+    if (ok) {
+      const btn = document.getElementById('copyBtn');
+      const oldText = btn.textContent;
+      btn.textContent = 'Đã sao chép!';
+      setTimeout(() => { btn.textContent = oldText; }, 1500);
+    }
+  }
+
+  // Khởi tạo
+  calculate();
+</script>
+</body>
+</html>
